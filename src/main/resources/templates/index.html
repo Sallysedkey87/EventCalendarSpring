@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Events Calendar</title>
+    <!-- FullCalendar v6 CDN -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, Helvetica, sans-serif;
+            overflow: hidden; /* Prevent scrollbars for full screen */
+        }
+
+        /* Make calendar fill the screen */
+        #calendar {
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Gray background for days with events */
+        .bg-gray {
+            background-color: #e0e0e0 !important;
+        }
+
+        /* Add Event container styling */
+        .add-event-container {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .add-event-container a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .add-event-container a:hover {
+            text-decoration: underline;
+        }
+
+        /* Show Add Event container only on hover of the day cell */
+        .fc-daygrid-day:hover .add-event-container {
+            display: block;
+        }
+
+        /* Ensure day cell frame is relative for absolute positioning */
+        .fc-daygrid-day-frame {
+            position: relative;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="calendar"></div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            
+            // Fetch events from our new Spring Boot API endpoint
+            fetch('/api/events')
+                .then(response => response.json())
+                .then(eventsData => {
+                    
+                    // Map backend events to FullCalendar format
+                    var fcEvents = eventsData.map(function(e) {
+                        return {
+                            id: e.id,
+                            title: e.title,
+                            start: e.date,
+                            url: '/event/' + e.id // Event link
+                        };
+                    });
+
+                    // Create a set of dates that have events for quick lookup
+                    var eventDates = new Set(fcEvents.map(function(e) { return e.start; }));
+
+                    var calendar = new FullCalendar.Calendar(calendarEl, {
+                        initialView: 'dayGridMonth',
+                        height: '100%',
+                        events: fcEvents,
+                        dayCellDidMount: function(arg) {
+                            // Format date to YYYY-MM-DD using local time
+                            var year = arg.date.getFullYear();
+                            var month = String(arg.date.getMonth() + 1).padStart(2, '0');
+                            var day = String(arg.date.getDate()).padStart(2, '0');
+                            var localDateStr = year + '-' + month + '-' + day;
+
+                            if (eventDates.has(localDateStr)) {
+                                // Day has an event: add bg-gray class
+                                arg.el.classList.add('bg-gray');
+                            } else {
+                                // Day has no event: inject an absolute-positioned div with 'Add Event' link
+                                var frame = arg.el.querySelector('.fc-daygrid-day-frame');
+                                if (frame) {
+                                    var container = document.createElement('div');
+                                    container.className = 'add-event-container';
+                                    
+                                    var addLink = document.createElement('a');
+                                    addLink.href = '/add-event?date=' + localDateStr;
+                                    addLink.innerText = '+ Add Event';
+                                    
+                                    container.appendChild(addLink);
+                                    frame.appendChild(container);
+                                }
+                            }
+                        }
+                    });
+                    
+                    calendar.render();
+                })
+                .catch(error => console.error('Error fetching events:', error));
+        });
+    </script>
+</body>
+</html>
