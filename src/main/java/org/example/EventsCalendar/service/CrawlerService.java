@@ -2,8 +2,8 @@ package org.example.EventsCalendar.service;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.springframework.ai.client.AiClient;
-import org.springframework.ai.prompt.Prompt;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.Map;
@@ -11,10 +11,10 @@ import java.util.Map;
 @Service
 public class CrawlerService {
 
-    private final AiClient aiClient;
+    private final ChatModel chatModel;
 
-    public CrawlerService(AiClient aiClient) {
-        this.aiClient = aiClient;
+    public CrawlerService(ChatModel chatModel) {
+        this.chatModel = chatModel;
     }
 
     public String crawlAndProcess(String url) throws IOException {
@@ -30,6 +30,6 @@ public class CrawlerService {
             dateString, url
         );
 
-        return aiClient.generate(new Prompt(promptText)).getGeneration().getText();
+        return chatModel.call(promptText);
     }
 }
